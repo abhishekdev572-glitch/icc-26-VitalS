@@ -1,0 +1,17 @@
+{
+    "admin_username": "admin",
+    "admin_password": "VitalS123",
+    "kiosk_mode": false,
+    "frontend": {
+        "url": "http://127.0.0.1:8080/?nocache=1",
+        "ready_poll_interval_ms": 500,
+        "ready_poll_timeout_s": 30,
+        "ready_request_timeout_s": 1.5
+    },
+    "logging": {
+        "level": "INFO",
+        "max_bytes": 5242880,
+        "backup_count": 3
+    },
+    "theme": "light"
+}

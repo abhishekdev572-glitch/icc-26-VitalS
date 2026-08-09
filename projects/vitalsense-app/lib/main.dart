@@ -5,6 +5,7 @@ import 'providers/vital_sense_provider.dart';
 import 'screens/dashboard_screen.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(
     ChangeNotifierProvider(
       create: (_) => VitalSenseProvider(),

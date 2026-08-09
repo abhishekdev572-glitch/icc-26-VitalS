@@ -8,6 +8,8 @@ import '../widgets/fsr_grid.dart';
 import '../widgets/connection_status_badge.dart';
 import '../widgets/discovering_view.dart';
 import 'diagnostics_screen.dart';
+import 'settings_screen.dart';
+import 'logs_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -154,7 +156,12 @@ class DashboardScreen extends StatelessWidget {
                 icon: Icons.history_rounded,
                 label: 'Logs',
                 isActive: false,
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LogsScreen()),
+                  );
+                },
               ),
               _NavItem(
                 icon: Icons.build_circle_outlined,
@@ -178,7 +185,12 @@ class DashboardScreen extends StatelessWidget {
                 icon: Icons.settings_outlined,
                 label: 'Settings',
                 isActive: false,
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  );
+                },
               ),
             ],
           ),

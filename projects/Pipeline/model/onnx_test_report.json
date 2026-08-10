@@ -1,0 +1,105 @@
+{
+  "dataset_rows_evaluated": 12000,
+  "feature_source": "dataset_loads",
+  "split": "test",
+  "subject_count": 24,
+  "subject_id_min": 96,
+  "subject_id_max": 119,
+  "positions": [
+    "CENTER",
+    "LEFT",
+    "RIGHT"
+  ],
+  "zones": [
+    "head",
+    "shoulders",
+    "hips",
+    "heels"
+  ],
+  "overall_metrics": {
+    "mae_risk_points": 1.8830527067184448,
+    "rmse_risk_points": 2.7480628490448,
+    "maximum_absolute_error_risk_points": 21.191648483276367,
+    "highest_risk_body_part_accuracy": 0.9018333333333334,
+    "highest_risk_level_accuracy": 0.9698333333333333
+  },
+  "zone_metrics": {
+    "head": {
+      "mae_risk_points": 1.8731247186660767,
+      "rmse_risk_points": 2.878110647201538,
+      "r2": 0.9920011148294445
+    },
+    "shoulders": {
+      "mae_risk_points": 1.8852568864822388,
+      "rmse_risk_points": 2.6195662021636963,
+      "r2": 0.9935812022880458
+    },
+    "hips": {
+      "mae_risk_points": 1.7559579610824585,
+      "rmse_risk_points": 2.6391079425811768,
+      "r2": 0.9931432404727448
+    },
+    "heels": {
+      "mae_risk_points": 2.017871379852295,
+      "rmse_risk_points": 2.8454983234405518,
+      "r2": 0.9904783581259866
+    }
+  },
+  "highest_risk_body_part_confusion_matrix": {
+    "head": {
+      "head": 3144,
+      "shoulders": 72,
+      "hips": 191,
+      "heels": 349
+    },
+    "shoulders": {
+      "head": 129,
+      "shoulders": 4064,
+      "hips": 56,
+      "heels": 99
+    },
+    "hips": {
+      "head": 131,
+      "shoulders": 4,
+      "hips": 2140,
+      "heels": 7
+    },
+    "heels": {
+      "head": 30,
+      "shoulders": 58,
+      "hips": 52,
+      "heels": 1474
+    }
+  },
+  "highest_risk_level_confusion_matrix": {
+    "LOW": {
+      "LOW": 3576,
+      "MEDIUM": 116,
+      "HIGH": 0
+    },
+    "MEDIUM": {
+      "LOW": 38,
+      "MEDIUM": 3161,
+      "HIGH": 186
+    },
+    "HIGH": {
+      "LOW": 0,
+      "MEDIUM": 22,
+      "HIGH": 4901
+    }
+  },
+  "metadata_reference_test_metrics": {
+    "test_mae_risk_points": 1.8830528482794762,
+    "test_rmse_risk_points": 2.7480630204081535,
+    "test_max_abs_error_risk_points": 21.191640198230743,
+    "highest_risk_body_part_accuracy": 0.9018333554267883,
+    "highest_risk_level_accuracy": 0.9698333144187927,
+    "train_subjects": 96,
+    "test_subjects": 24,
+    "train_rows": 48000,
+    "test_rows": 12000
+  },
+  "warning": "Synthetic engineering risk index only; not a clinically validated pressure-ulcer probability or diagnostic model.",
+  "runtime": "onnxruntime",
+  "model_path": "pressure_risk_mlp.onnx"
+}

@@ -1,0 +1,33 @@
+****************************************************************************************************
+Processing step 2 of 2
+codegen: codegen: Generate "C++" source code from the compiled model
+Adding buffer: PrimaryTensorArena: size=1.9k section=.bss
+Adding "const" keyword to model data variable since it's in the .rodata data section
+Destination directory=C:/Users/KIIT0001/SimplicityStudio/v6_workspace/bt_imu_mode/config/tflite/temp_2b87ef58df724da2a623d0969fe853ae/codegen
+Cleaning destination directory=C:/Users/KIIT0001/SimplicityStudio/v6_workspace/bt_imu_mode/config/tflite/temp_2b87ef58df724da2a623d0969fe853ae/codegen
+Layer op0-fully_connected: is not supported by the accelerator and does NOT have a fallback implementation
+Layer op1-relu: is not supported by the accelerator and does NOT have a fallback implementation
+Layer op2-fully_connected: is not supported by the accelerator and does NOT have a fallback implementation
+Layer op3-relu: is not supported by the accelerator and does NOT have a fallback implementation
+Layer op4-fully_connected: is not supported by the accelerator and does NOT have a fallback implementation
+Layer op5-logistic: is not supported by the accelerator and does NOT have a fallback implementation
+Including the following manifest sections:
+accelerators.sw_ref.core
+accelerators.sw_ref.kernels.impl.fully_connected
+accelerators.sw_ref.kernels.impl.logistic
+accelerators.sw_ref.kernels.impl.relu
+accelerators.sw_ref.kernels.impl.relu6
+core
+core.compiled_model
+core.flatbuffers
+core.gemmlowp
+core.half
+core.ruy
+core.tflite_micro_model
+core.tflm
+core.utils
+platforms.efr32xg26.core
+Stripped 724.0 of strings from the .tflite model
+Generated C:/Users/KIIT0001/SimplicityStudio/v6_workspace/bt_imu_mode/config/tflite/temp_2b87ef58df724da2a623d0969fe853ae/codegen/pressure_risk_mlp_generated.hpp
+from C:\Users\KIIT0001\SimplicityStudio\v6_workspace\bt_imu_mode\config\tflite\pressure_risk_mlp.tflite
+Finished processing step 2 of 2 in 8.85 seconds

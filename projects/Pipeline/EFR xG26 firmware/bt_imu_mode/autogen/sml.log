@@ -1,0 +1,23 @@
+2026-08-07 16:54:56 - [INFO] (compiler.py:85): sml.log created by aiml/tool/compiler/compiler.py (Studio/SLC adapter).
+2026-08-07 16:54:56 - [INFO] (compiler.py:88): sml appends below.
+2026-08-07 16:54:56 - [DEBUG] (compiler.py:90): Input Directory: C:\Users\KIIT0001\AppData\Local\Temp\apack_aiml.mvp-compiler6653613539344460712\data\tflite
+2026-08-07 16:54:56 - [INFO] (compiler.py:91): Output Directory: C:\Users\KIIT0001\AppData\Local\Temp\apack_aiml.mvp-compiler6653613539344460712\output
+2026-08-07 16:54:56 - [INFO] (compiler.py:92): Part Number: efr32mg26b510f3200im68
+2026-08-07 16:54:56 - [DEBUG] (compiler.py:66): found sml executable: sml_win_amd64.exe
+2026-08-07 16:54:56 - [DEBUG] (compiler.py:96): got sml executable: C:\Users\KIIT0001\.silabs\slt\installs\conan\p\aiml27ab4ff04b728\p\tool\compiler\sml_win_amd64.exe
+2026-08-07 16:54:56 - [DEBUG] (compiler.py:104): processing C:\Users\KIIT0001\AppData\Local\Temp\apack_aiml.mvp-compiler6653613539344460712\data\tflite\pressure_risk.mlconf file
+2026-08-07 16:55:46 - [INFO] (compiler_cli.py:226): compile: streaming log file C:\Users\KIIT0001\AppData\Local\Temp\apack_aiml.mvp-compiler6653613539344460712\output\sml.log
+2026-08-07 16:55:46 - [INFO] (compiler_cli_config.py:92): Using compiler config from --config: C:\Users\KIIT0001\AppData\Local\Temp\apack_aiml.mvp-compiler6653613539344460712\data\tflite\pressure_risk.mlconf
+2026-08-07 16:55:47 - [INFO] (compiler_cli_config.py:129): is_studio: compile flags do not override merged YAML/config (omit --is-studio to apply compile overrides).
+2026-08-07 16:55:49 - [INFO] (compiler_cli_platform.py:120): compile: normalized platform 'efr32mg26b510f3200im68' to 'efr32xg26'
+2026-08-07 16:55:50 - [WARNING] (options.py:45): MemoryOptimizer disabled but weights_paging_enabled is set to true. Forcing weights_paging_enabled=false
+2026-08-07 16:55:51 - [WARNING] (copy_sources.py:150): Layer op0-fully_connected: is not supported by the accelerator and does NOT have a fallback implementation
+2026-08-07 16:55:51 - [WARNING] (copy_sources.py:150): Layer op1-relu: is not supported by the accelerator and does NOT have a fallback implementation
+2026-08-07 16:55:51 - [WARNING] (copy_sources.py:150): Layer op2-fully_connected: is not supported by the accelerator and does NOT have a fallback implementation
+2026-08-07 16:55:51 - [WARNING] (copy_sources.py:150): Layer op3-relu: is not supported by the accelerator and does NOT have a fallback implementation
+2026-08-07 16:55:51 - [WARNING] (copy_sources.py:150): Layer op4-fully_connected: is not supported by the accelerator and does NOT have a fallback implementation
+2026-08-07 16:55:51 - [WARNING] (copy_sources.py:150): Layer op5-logistic: is not supported by the accelerator and does NOT have a fallback implementation
+2026-08-07 16:56:00 - [INFO] (compile_tflite_model.py:180): Total compilation time: 10.60 seconds
+2026-08-07 16:56:07 - [INFO] (compiler_cli.py:291): compile: success
+2026-08-07 16:56:07 - [INFO] (compiler_cli.py:304): compile: wrote sl_ml_model_* helper template under C:\Users\KIIT0001\AppData\Local\Temp\apack_aiml.mvp-compiler6653613539344460712\output
+2026-08-07 16:56:25 - [DEBUG] (compiler.py:121): sml executed with return code 0

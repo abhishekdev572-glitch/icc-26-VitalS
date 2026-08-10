@@ -1,0 +1,104 @@
+{
+  "purpose": "Prototype body-part pressure-time risk ranking",
+  "warning": "Synthetic engineering risk index only; not a clinically validated pressure-ulcer probability or diagnostic model.",
+  "source_files": [
+    "/mnt/data/vitalsense_data_20260807_020412.csv",
+    "/mnt/data/xg26_position_dataset3.csv"
+  ],
+  "source_stable_rows_1s": 1735,
+  "synthetic_rows": 60000,
+  "adc_decreases_with_load": false,
+  "positions": [
+    "CENTER",
+    "LEFT",
+    "RIGHT"
+  ],
+  "zones": [
+    "head",
+    "shoulders",
+    "hips",
+    "heels"
+  ],
+  "calibration": {
+    "head": {
+      "adc_q05": 3119.0,
+      "adc_q95": 3932.0
+    },
+    "shoulders": {
+      "adc_q05": 3537.0,
+      "adc_q95": 3994.0
+    },
+    "hips": {
+      "adc_q05": 3007.0,
+      "adc_q95": 3909.0
+    },
+    "heels": {
+      "adc_q05": 3222.0,
+      "adc_q95": 4021.0
+    }
+  },
+  "teacher_config": {
+    "reference_duration_seconds": 7200.0,
+    "relief_floor": 0.1,
+    "pressure_exponent": 1.5,
+    "risk_gain": 1.5,
+    "low_medium_threshold": 35.0,
+    "medium_high_threshold": 70.0
+  },
+  "posture_load_means_from_recording": {
+    "CENTER": {
+      "head_load": 0.754304,
+      "shoulders_load": 0.755253,
+      "hips_load": 0.688876,
+      "heels_load": 0.842653
+    },
+    "LEFT": {
+      "head_load": 0.830908,
+      "shoulders_load": 0.253131,
+      "hips_load": 0.925493,
+      "heels_load": 0.247307
+    },
+    "RIGHT": {
+      "head_load": 0.542928,
+      "shoulders_load": 0.890169,
+      "hips_load": 0.251283,
+      "heels_load": 0.43124
+    }
+  },
+  "model": {
+    "type": "PyTorch MLP",
+    "input_order": [
+      "position_CENTER",
+      "position_LEFT",
+      "position_RIGHT",
+      "log_duration_normalized",
+      "head_load",
+      "shoulders_load",
+      "hips_load",
+      "heels_load",
+      "head_exposure_scaled",
+      "shoulders_exposure_scaled",
+      "hips_exposure_scaled",
+      "heels_exposure_scaled"
+    ],
+    "architecture": "12 -> 16 ReLU -> 8 ReLU -> 4 Sigmoid",
+    "output_order": [
+      "head_risk_score_0_to_1",
+      "shoulders_risk_score_0_to_1",
+      "hips_risk_score_0_to_1",
+      "heels_risk_score_0_to_1"
+    ],
+    "parameter_count": 380,
+    "metrics": {
+      "test_mae_risk_points": 1.8830528482794762,
+      "test_rmse_risk_points": 2.7480630204081535,
+      "test_max_abs_error_risk_points": 21.191640198230743,
+      "highest_risk_body_part_accuracy": 0.9018333554267883,
+      "highest_risk_level_accuracy": 0.9698333144187927,
+      "train_subjects": 96,
+      "test_subjects": 24,
+      "train_rows": 48000,
+      "test_rows": 12000
+    }
+  }
+}

@@ -1,0 +1,31 @@
+# Large datasets
+Dataset/*.csv
+
+# Build artifacts
+**/build/
+**/cmake_gcc/build/
+**/*.out
+**/*.map
+**/*.a
+**/*.o
+**/*.obj
+**/compile_commands.json
+**/CMakeFiles/
+**/impl-base.ninja
+
+# Firmware SDK build outputs
+EFR xG26 firmware/**/build/
+EFR xG26 firmware/**/simplicity_sdk_*/**/build/
+
+# Model outputs
+model/*.csv
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db

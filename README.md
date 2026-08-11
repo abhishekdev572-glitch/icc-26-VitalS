@@ -26,11 +26,11 @@ graph TD
     ESP -->|UDP Broadcast\nPort 5005\nJSON v1| MOBILE
     ESP -->|UDP Broadcast\nPort 5005\nJSON v1| WEB
 
-    style FSR fill:#fce4ec
-    style ESP fill:#e3f2fd
-    style EFR fill:#fff3e0
-    style MOBILE fill:#e8f5e9
-    style WEB fill:#f3e5f5
+    style FSR fill:#e8f0fe,stroke:#1a73e8,stroke-width:2px,color:#1a73e8
+    style ESP fill:#e6f4ea,stroke:#1e8e3e,stroke-width:2px,color:#1e8e3e
+    style EFR fill:#fff3cd,stroke:#e67e22,stroke-width:2px,color:#e67e22
+    style MOBILE fill:#fce4ec,stroke:#c2185b,stroke-width:2px,color:#c2185b
+    style WEB fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#7b1fa2
 ```
 
 ## Hardware Requirements

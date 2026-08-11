@@ -2,7 +2,7 @@
 
 This directory contains the two main components of the VitalSense system:
 
-## 📱 [vitalsense-app](./vitalsense-app)
+## vitalsense-app
 
 **VitalSense Caregiver Dashboard (Flutter Mobile App)**
 
@@ -19,7 +19,7 @@ A real-time caregiver dashboard mobile application built with Flutter. It listen
   - Raw sensor & plate ADC data visualization
   - Engineering & diagnostics view
 
-## 🖥️ [vitalsense-dashboard](./vitalsense-dashboard)
+## vitalsense-dashboard
 
 **VitalSense Web Dashboard (Python/Flask)**
 

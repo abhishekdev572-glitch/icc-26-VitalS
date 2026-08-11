@@ -15,10 +15,13 @@ graph TD
     E --> F[WebKit2 WebView\nGTK4 Window]
     F --> G[Kiosk Display]
 
-    style A fill:#e1f5fe
-    style B fill:#fff3e0
-    style D fill:#f3e5f5
-    style F fill:#e8f5e9
+    style A fill:#e8f0fe,stroke:#1a73e8,stroke-width:2px,color:#1a73e8
+    style B fill:#fff3cd,stroke:#e67e22,stroke-width:2px,color:#e67e22
+    style C fill:#fce4ec,stroke:#c2185b,stroke-width:2px,color:#c2185b
+    style D fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#7b1fa2
+    style E fill:#e6f4ea,stroke:#1e8e3e,stroke-width:2px,color:#1e8e3e
+    style F fill:#e8f0fe,stroke:#1a73e8,stroke-width:2px,color:#1a73e8
+    style G fill:#e6f4ea,stroke:#1e8e3e,stroke-width:2px,color:#1e8e3e
 ```
 
 ## Components

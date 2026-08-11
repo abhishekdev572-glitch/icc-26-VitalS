@@ -1,4 +1,4 @@
-# VitalSense Caregiver Dashboard 🩺
+# VitalSense Caregiver Dashboard
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.x-0175C2?logo=dart)](https://dart.dev)
@@ -9,18 +9,18 @@
 
 ---
 
-## 📱 Features
+## Features
 
-- ⚡ **Auto-Discovery & Zero-Config Networking**: Listens on UDP port `5005` to automatically discover and stream live data from ESP32 bed units on the local Wi-Fi network.
-- 🛏️ **Bed & Connection Status Monitoring**: Visual status indicators (`LIVE`, `STALE`, `OFFLINE`) with dynamic heartbeats and last-packet tracking.
-- 🧘 **Posture & Duration Tracking**: Displays real-time body orientation (`CENTER/BACK`, `LEFT`, `RIGHT`) and precise posture duration counters.
-- ⚠️ **Pressure Injury Risk Assessment**: Circular gauges for 4 key anatomical zones (Head, Shoulders, Hips, Heels) alongside highest-risk highlights and 60-second threshold progression.
-- 📊 **Raw Sensor & Plate ADC Data**: Interactive visualizers for 8-channel FSR raw values (ADC 0–4095) and 4-zone averaged plate data.
-- 🔧 **Engineering & Diagnostics View**: Deep-dive hardware panel showing ESP32 uptime, protocol version, IP, raw ADC streams, and Avoid-Return alerts.
+- **Auto-Discovery & Zero-Config Networking**: Listens on UDP port `5005` to automatically discover and stream live data from ESP32 bed units on the local Wi-Fi network.
+- **Bed & Connection Status Monitoring**: Visual status indicators (`LIVE`, `STALE`, `OFFLINE`) with dynamic heartbeats and last-packet tracking.
+- **Posture & Duration Tracking**: Displays real-time body orientation (`CENTER/BACK`, `LEFT`, `RIGHT`) and precise posture duration counters.
+- **Pressure Injury Risk Assessment**: Circular gauges for 4 key anatomical zones (Head, Shoulders, Hips, Heels) alongside highest-risk highlights and 60-second threshold progression.
+- **Raw Sensor & Plate ADC Data**: Interactive visualizers for 8-channel FSR raw values (ADC 0–4095) and 4-zone averaged plate data.
+- **Engineering & Diagnostics View**: Deep-dive hardware panel showing ESP32 uptime, protocol version, IP, raw ADC streams, and Avoid-Return alerts.
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 ```text
   [8x FSR Array]
@@ -44,7 +44,7 @@
 
 ---
 
-## ⚙️ Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -77,7 +77,7 @@
 
 ---
 
-## 📦 Building for Production
+## Building for Production
 
 To build the release Android APK:
 
@@ -90,7 +90,7 @@ The compiled APK will be available at:
 
 ---
 
-## 📡 Communication Protocol Spec
+## Communication Protocol Spec
 
 The app implements **VitalSense Protocol v1** over UDP port `5005`.
 
@@ -136,6 +136,6 @@ Refer to [VitalSense_Dashboard_Integration_Protocol_v1.md](VitalSense_Dashboard_
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.

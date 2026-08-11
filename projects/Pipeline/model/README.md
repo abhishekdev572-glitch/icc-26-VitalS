@@ -129,6 +129,141 @@ Subject-wise split (no leakage).
 
 ---
 
+## Silicon Labs SML Setup & Model Conversion for EFR32xG26
+
+### 1. Start WSL / Linux
+
+On Windows, first open PowerShell/CMD and run:
+```bash
+wsl
+```
+
+Then inside WSL/Linux:
+```bash
+cd ~
+```
+
+### 2. Basic Packages
+
+```bash
+sudo apt update
+sudo apt install -y \
+    wget \
+    unzip \
+    ca-certificates \
+    build-essential \
+    python3 \
+    python3-pip
+```
+
+### 3. Check if Silicon Labs SML is Already Installed
+
+```bash
+find "$HOME/.silabs/slt/installs" \
+    -type f \
+    -name "sml" \
+    -perm -111 \
+    2>/dev/null
+```
+
+### 4. Add Existing SML Installation to PATH
+
+This is the path used in our working VitalSense setup:
+```bash
+export PATH="$HOME/.silabs/slt/installs/archive/sml-cli:$PATH"
+hash -r
+```
+
+### 5. Check SML
+
+```bash
+which sml
+sml --version
+sml --help
+```
+
+For your existing installation, you should get something similar to:
+```
+/home/kiit/.silabs/slt/installs/archive/sml-cli/sml
+```
+
+### Make the PATH Permanent
+
+Otherwise you need to run the export PATH=... command every time WSL is reopened:
+
+```bash
+echo 'export PATH="$HOME/.silabs/slt/installs/archive/sml-cli:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+which sml
+sml --version
+```
+
+After that, every new WSL terminal should recognize `sml` directly.
+
+### If SML is NOT Installed
+
+First check whether Silicon Labs SLT exists:
+```bash
+which slt
+slt --version
+```
+
+If slt exists, install the SML CLI:
+```bash
+slt install sml
+```
+
+Then locate it:
+```bash
+slt where sml
+```
+
+Silicon Labs documents `slt install sml` as the CLI installation method.
+
+You can also search for the installed executable:
+```bash
+find "$HOME/.silabs/slt/installs" \
+    -type f \
+    -name "sml" \
+    -perm -111 \
+    2>/dev/null
+```
+
+Then add the directory containing sml to PATH:
+```bash
+export PATH="/path/returned/by/slt:$PATH"
+```
+
+### VitalSense Model Workflow
+
+Your Windows folder:
+```
+C:\Users\KIIT0001\Downloads\VitalS model
+```
+
+appears inside WSL as:
+```
+/mnt/c/Users/KIIT0001/Downloads/VitalS model
+```
+
+So:
+```bash
+cd "/mnt/c/Users/KIIT0001/Downloads/VitalS model"
+```
+
+Check the files:
+```bash
+pwd
+ls -lah
+```
+
+You should see something such as:
+```
+pressure_risk_mlp.onnx
+```
+
+---
+
 ## Converting / Rebuilding
 
 ### PyTorch → ONNX

@@ -1,0 +1,23 @@
+# ESP32 Firmware build artifacts
+*.bin
+*.elf
+*.map
+*.hex
+*.ino.elf
+*.ino.bin
+*.ino.hex
+*.ino.map
+*.ino.with_bootloader.bin
+*.ino.with_bootloader.hex
+
+# Arduino/PlatformIO
+.pio/
+platformio.ini.local
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

@@ -16,6 +16,28 @@
 **/IAR ARM*
 **/sonar-bw/
 
+# Virtual environments
+**/venv/
+**/env/
+**/.venv/
+
+# IDE/Editor
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Backup files
+*.backup
+*~
+
 ##Enable these if you are not tracking Simplicity studio project
 # **/.cproject
 # **/.project

@@ -61,8 +61,8 @@
    USER CONFIG
    ============================================================ */
 
-static const char* WIFI_SSID     = "Blink";
-static const char* WIFI_PASSWORD = "Arpan@123";
+static const char* WIFI_SSID     = "YOUR_WIFI_SSID";
+static const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
 
 static const uint16_t UDP_PORT = 5005;
 

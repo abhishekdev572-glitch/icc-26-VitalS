@@ -1,0 +1,35 @@
+name: ESP32 Firmware CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'projects/Pipeline/ESP32 firmware/**'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'projects/Pipeline/ESP32 firmware/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install PlatformIO
+        run: |
+          pip install platformio
+
+      - name: Build ESP32 Firmware
+        run: |
+          cd "projects/Pipeline/ESP32 firmware"
+          pio run -e esp32c3
+
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: esp32-firmware
+          path: "projects/Pipeline/ESP32 firmware/.pio/build/esp32c3/firmware.bin"
+          retention-days: 7

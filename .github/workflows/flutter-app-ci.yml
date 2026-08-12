@@ -1,0 +1,53 @@
+name: Flutter App CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'projects/vitalsense-app/**'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'projects/vitalsense-app/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: |
+          cd projects/vitalsense-app
+          flutter pub get
+
+      - name: Analyze code
+        run: |
+          cd projects/vitalsense-app
+          flutter analyze
+
+      - name: Run tests
+        run: |
+          cd projects/vitalsense-app
+          flutter test
+
+      - name: Build APK
+        run: |
+          cd projects/vitalsense-app
+          flutter build apk --release
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitalsense-app-release-apk
+          path: projects/vitalsense-app/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 7

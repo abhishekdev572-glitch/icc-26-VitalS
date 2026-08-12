@@ -61,4 +61,4 @@ projects/
 Each project has its own setup instructions. Please refer to the individual README files in each project directory for detailed installation and usage guides.
 
 - [vitalsense-app Setup](./vitalsense-app/README.md)
-- [vitalsense-dashboard Setup](./vitalsense-dashboard/README.md) *(to be created)*
+- [vitalsense-dashboard Setup](./vitalsense-dashboard/README.md)

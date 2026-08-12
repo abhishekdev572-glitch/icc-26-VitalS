@@ -1,6 +1,6 @@
 {
     "admin_username": "admin",
-    "admin_password": "VitalS123",
+    "admin_password": "CHANGE_ME",
     "kiosk_mode": false,
     "frontend": {
         "url": "http://127.0.0.1:8080/?nocache=1",

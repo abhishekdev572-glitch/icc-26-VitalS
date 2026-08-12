@@ -402,9 +402,6 @@ icc-26-VitalS/
 
 ## License
 
-SPDX-License-Identifier: MIT  
-Copyright 2025 VitalSense Project Contributors
-
 See [LICENSE.md](./LICENSE.md) for details.
 
 ## Contributing

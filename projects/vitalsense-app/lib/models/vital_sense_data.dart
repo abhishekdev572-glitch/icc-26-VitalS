@@ -39,10 +39,10 @@ class VitalSenseData {
       fsr: (json['fsr'] as List<dynamic>).map((e) => _toInt(e)).toList(),
       riskValid: (json['riskValid'] as bool?) ?? false,
       risk: RiskData.fromJson(json['risk'] as Map<String, dynamic>),
-      highestRisk: HighestRisk.fromJson(
-          json['highestRisk'] as Map<String, dynamic>),
-      avoidReturn: AvoidReturnData.fromJson(
-          json['avoidReturn'] as Map<String, dynamic>),
+      highestRisk:
+          HighestRisk.fromJson(json['highestRisk'] as Map<String, dynamic>),
+      avoidReturn:
+          AvoidReturnData.fromJson(json['avoidReturn'] as Map<String, dynamic>),
       uptime: _toInt(json['uptime']),
     );
   }

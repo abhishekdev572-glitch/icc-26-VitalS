@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/ble_provisioning_provider.dart';
 import '../providers/vital_sense_provider.dart';
 
 /// Engineering/diagnostics screen showing raw FSR values, plate ADC values,
@@ -11,6 +13,8 @@ class DiagnosticsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final data = device.data;
+    final vitalSense = context.watch<VitalSenseProvider>();
+    final provisioning = context.watch<BleProvisioningProvider>();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9F9FF),
@@ -29,11 +33,40 @@ class DiagnosticsScreen extends StatelessWidget {
             _InfoRow(label: 'Device ID', value: data.deviceId),
             _InfoRow(label: 'Bed', value: data.bedLabel),
             _InfoRow(label: 'Protocol Version', value: 'v${data.protocol}'),
-            _InfoRow(label: 'Source IP', value: device.sourceIp.isEmpty ? 'N/A' : device.sourceIp),
+            _InfoRow(
+                label: 'Source IP',
+                value: device.sourceIp.isEmpty ? 'N/A' : device.sourceIp),
             _InfoRow(label: 'ESP32 Uptime', value: _formatUptime(data.uptime)),
           ]),
           const SizedBox(height: 16),
-
+          const _SectionHeader(title: 'Network'),
+          _InfoCard(children: [
+            _InfoRow(
+              label: 'UDP Listener',
+              value: vitalSense.udpListenerActive ? 'Active' : 'Inactive',
+            ),
+            _InfoRow(label: 'UDP Port', value: '${vitalSense.udpPort}'),
+            _InfoRow(
+              label: 'ESP32 IP',
+              value: device.sourceIp.isEmpty ? 'N/A' : device.sourceIp,
+            ),
+            _InfoRow(label: 'Device ID', value: data.deviceId),
+          ]),
+          const SizedBox(height: 16),
+          const _SectionHeader(title: 'Provisioning'),
+          _InfoCard(children: [
+            _InfoRow(
+              label: 'BLE',
+              value: provisioning.isBleConnected
+                  ? 'Connected for setup'
+                  : 'Not Connected',
+            ),
+            _InfoRow(
+              label: 'Configured SSID',
+              value: provisioning.configuredSsid ?? 'Unknown',
+            ),
+          ]),
+          const SizedBox(height: 16),
           const _SectionHeader(title: 'Connection'),
           _InfoCard(children: [
             _InfoRow(
@@ -47,27 +80,25 @@ class DiagnosticsScreen extends StatelessWidget {
             ),
           ]),
           const SizedBox(height: 16),
-
           const _SectionHeader(title: 'Raw FSR Values (ADC 0–4095)'),
           _FsrDiagnosticCard(fsr: data.fsr),
           const SizedBox(height: 16),
-
           const _SectionHeader(title: 'Plate Values (Averaged ADC)'),
           _InfoCard(children: [
             _InfoRow(label: 'Head Plate', value: data.plates.head.toString()),
-            _InfoRow(label: 'Shoulders Plate', value: data.plates.shoulders.toString()),
+            _InfoRow(
+                label: 'Shoulders Plate',
+                value: data.plates.shoulders.toString()),
             _InfoRow(label: 'Hips Plate', value: data.plates.hips.toString()),
             _InfoRow(label: 'Heels Plate', value: data.plates.heels.toString()),
           ]),
           const SizedBox(height: 16),
-
           const _SectionHeader(title: 'Position'),
           _InfoCard(children: [
             _InfoRow(label: 'Position', value: data.position),
             _InfoRow(label: 'Duration', value: data.formattedDuration),
           ]),
           const SizedBox(height: 16),
-
           const _SectionHeader(title: 'Risk Assessment'),
           _InfoCard(children: [
             _InfoRow(
@@ -108,13 +139,20 @@ class DiagnosticsScreen extends StatelessWidget {
             ),
           ]),
           const SizedBox(height: 16),
-
           const _SectionHeader(title: 'Avoid-Return Flags'),
           _InfoCard(children: [
-            _InfoRow(label: 'Head', value: data.avoidReturn.head == 1 ? 'ACTIVE' : 'None'),
-            _InfoRow(label: 'Shoulders', value: data.avoidReturn.shoulders == 1 ? 'ACTIVE' : 'None'),
-            _InfoRow(label: 'Hips', value: data.avoidReturn.hips == 1 ? 'ACTIVE' : 'None'),
-            _InfoRow(label: 'Heels', value: data.avoidReturn.heels == 1 ? 'ACTIVE' : 'None'),
+            _InfoRow(
+                label: 'Head',
+                value: data.avoidReturn.head == 1 ? 'ACTIVE' : 'None'),
+            _InfoRow(
+                label: 'Shoulders',
+                value: data.avoidReturn.shoulders == 1 ? 'ACTIVE' : 'None'),
+            _InfoRow(
+                label: 'Hips',
+                value: data.avoidReturn.hips == 1 ? 'ACTIVE' : 'None'),
+            _InfoRow(
+                label: 'Heels',
+                value: data.avoidReturn.heels == 1 ? 'ACTIVE' : 'None'),
           ]),
           const SizedBox(height: 24),
         ],
@@ -313,8 +351,8 @@ class _FsrDiagnosticCard extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: pct,
                       backgroundColor: const Color(0xFFE7EEFF),
-                      valueColor: const AlwaysStoppedAnimation(
-                          Color(0xFF90CAF9)),
+                      valueColor:
+                          const AlwaysStoppedAnimation(Color(0xFF90CAF9)),
                       minHeight: 8,
                     ),
                   ),

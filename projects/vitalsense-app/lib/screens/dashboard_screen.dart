@@ -86,8 +86,9 @@ class DashboardScreen extends StatelessWidget {
           builder: (context, provider, _) {
             final device = provider.selectedDevice;
             if (device != null) {
-              final isOfflineOrStale = device.connectionStatus == ConnectionStatus.offline ||
-                  device.connectionStatus == ConnectionStatus.stale;
+              final isOfflineOrStale =
+                  device.connectionStatus == ConnectionStatus.offline ||
+                      device.connectionStatus == ConnectionStatus.stale;
               return Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -101,7 +102,8 @@ class DashboardScreen extends StatelessWidget {
                   ),
                   if (isOfflineOrStale)
                     IconButton(
-                      icon: const Icon(Icons.refresh_rounded, color: Color(0xFF21638D)),
+                      icon: const Icon(Icons.refresh_rounded,
+                          color: Color(0xFF21638D)),
                       onPressed: () => provider.reconnect(),
                       tooltip: 'Reconnect',
                     ),
@@ -126,7 +128,8 @@ class DashboardScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(
-          top: BorderSide(color: const Color(0xFFC1C7CF).withValues(alpha: 0.5)),
+          top:
+              BorderSide(color: const Color(0xFFC1C7CF).withValues(alpha: 0.5)),
         ),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(20),
@@ -174,8 +177,7 @@ class DashboardScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) =>
-                            DiagnosticsScreen(device: device),
+                        builder: (_) => DiagnosticsScreen(device: device),
                       ),
                     );
                   }
@@ -215,9 +217,7 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive
-        ? const Color(0xFF21638D)
-        : const Color(0xFF71787F);
+    final color = isActive ? const Color(0xFF21638D) : const Color(0xFF71787F);
 
     return GestureDetector(
       onTap: onTap,
@@ -239,8 +239,7 @@ class _NavItem extends StatelessWidget {
               label,
               style: TextStyle(
                 fontSize: 10,
-                fontWeight:
-                    isActive ? FontWeight.w700 : FontWeight.w500,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
                 color: color,
                 letterSpacing: 0.5,
               ),

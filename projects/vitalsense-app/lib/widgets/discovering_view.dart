@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/vital_sense_provider.dart';
+import '../screens/device_setup_screen.dart';
 
 /// Shown on the dashboard when no VitalSense device has been discovered yet.
 class DiscoveringView extends StatefulWidget {
@@ -16,6 +19,8 @@ class _DiscoveringViewState extends State<DiscoveringView>
   late Animation<double> _scale;
   late Animation<double> _opacity;
   bool _isRetrying = false;
+  bool _showSetupOptions = false;
+  Timer? _discoveryTimer;
 
   @override
   void initState() {
@@ -30,12 +35,22 @@ class _DiscoveringViewState extends State<DiscoveringView>
     _opacity = Tween<double>(begin: 0.4, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
+    _discoveryTimer = Timer(const Duration(seconds: 8), () {
+      if (mounted) setState(() => _showSetupOptions = true);
+    });
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _discoveryTimer?.cancel();
     super.dispose();
+  }
+
+  Future<void> _openSetup(BuildContext context) async {
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const DeviceSetupScreen()),
+    );
   }
 
   Future<void> _onRetryPressed(BuildContext context) async {
@@ -76,9 +91,11 @@ class _DiscoveringViewState extends State<DiscoveringView>
               ),
             ),
             const SizedBox(height: 32),
-            const Text(
-              'Scanning for Devices',
-              style: TextStyle(
+            Text(
+              _showSetupOptions
+                  ? 'No VitalSense device detected'
+                  : 'Scanning for Devices',
+              style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFF111C2D),
@@ -92,14 +109,16 @@ class _DiscoveringViewState extends State<DiscoveringView>
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFEBEE),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
+                  border: Border.all(
+                      color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.error_outline, color: Color(0xFFEF4444), size: 20),
+                        const Icon(Icons.error_outline,
+                            color: Color(0xFFEF4444), size: 20),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -117,15 +136,18 @@ class _DiscoveringViewState extends State<DiscoveringView>
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton.icon(
-                        onPressed: _isRetrying ? null : () => _onRetryPressed(context),
+                        onPressed:
+                            _isRetrying ? null : () => _onRetryPressed(context),
                         icon: _isRetrying
                             ? const SizedBox(
                                 width: 16,
                                 height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white),
                               )
                             : const Icon(Icons.refresh, size: 18),
-                        label: Text(_isRetrying ? 'Retrying...' : 'Retry Connection'),
+                        label: Text(
+                            _isRetrying ? 'Retrying...' : 'Retry Connection'),
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xFFEF4444),
                           foregroundColor: Colors.white,
@@ -137,10 +159,12 @@ class _DiscoveringViewState extends State<DiscoveringView>
                 ),
               ),
             ] else ...[
-              const Text(
-                'Listening on UDP port 5005.\nMake sure your device and the ESP32 are on the same Wi-Fi network.',
+              Text(
+                _showSetupOptions
+                    ? 'Make sure your VitalSense unit and phone are connected to the same Wi-Fi network.'
+                    : 'Listening on UDP port 5005.\nMake sure your device and the ESP32 are on the same Wi-Fi network.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 14,
                   color: Color(0xFF71787F),
                   height: 1.6,
@@ -175,12 +199,26 @@ class _DiscoveringViewState extends State<DiscoveringView>
                 ],
               ),
             ),
+            if (_showSetupOptions) ...[
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () => _openSetup(context),
+                  icon: const Icon(Icons.settings_input_antenna),
+                  label: const Text('Set Up VitalSense'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+              ),
+            ],
             if (error == null) ...[
               const SizedBox(height: 24),
               TextButton.icon(
                 onPressed: () => _onRetryPressed(context),
                 icon: const Icon(Icons.refresh, size: 18),
-                label: const Text('Refresh'),
+                label: const Text('Try Again'),
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFF21638D),
                 ),

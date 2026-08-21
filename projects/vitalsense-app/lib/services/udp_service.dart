@@ -9,6 +9,7 @@ typedef VitalSensePacket = ({VitalSenseData data, String sourceIp});
 /// UDP service that listens on port 5005 for VitalSense Protocol v1 broadcasts.
 class UdpService {
   static const int _udpPort = 5005;
+  static const int port = _udpPort;
   RawDatagramSocket? _socket;
   final StreamController<VitalSensePacket> _controller =
       StreamController<VitalSensePacket>.broadcast();
@@ -89,4 +90,3 @@ class UdpService {
     _errorController.close();
   }
 }
-

@@ -2,7 +2,7 @@
 
 **Build Type:** LEAN (NimBLE + Manual JSON, no ArduinoJson)
 
-This firmware runs on the **ESP32-C3** and serves as the FSR sensor acquisition + BLE peripheral + UDP broadcaster in the VitalSense pressure ulcer prevention system.
+This firmware runs on the **ESP32-C3** and serves as the FSR sensor acquisition + BLE peripheral + Wi-Fi provisioning endpoint + UDP broadcaster in the VitalSense pressure ulcer prevention system. Wi-Fi credentials are supplied by the app over BLE, verified, and retained in ESP32 NVS; they are no longer compiled into the sketch.
 
 ---
 
@@ -42,8 +42,9 @@ This firmware runs on the **ESP32-C3** and serves as the FSR sensor acquisition 
 | 4 | **FSR Response** | On `0x01` command: fresh scan + notify 18-byte packet |
 | 5 | **Risk RX** | Receive 4× `0x02` risk packets from EFR32 |
 | 6 | **State RX** | Receive `0x03` posture+duration summary from EFR32 |
-| 7 | **UDP Broadcast** | Send complete VitalSense Protocol v1 JSON every 1s |
-| 8 | **Status LED** | GPIO 7 (active-low): solid = ready, blink = issues |
+| 7 | **Wi-Fi Provisioning** | Receive, verify, and save Wi-Fi credentials from the app over BLE |
+| 8 | **UDP Broadcast** | After Wi-Fi connects, send complete VitalSense Protocol v1 JSON every 1s |
+| 9 | **Status LED** | GPIO 7 (active-low): solid = ready, blink = issues |
 
 ---
 
@@ -117,6 +118,61 @@ This firmware runs on the **ESP32-C3** and serves as the FSR sensor acquisition 
 
 ---
 
+## Wi-Fi Provisioning from the App over BLE
+
+The phone connects to the same BLE device name, `VitalSense-ESP32C3`, then discovers the Wi-Fi provisioning service. Only the main VitalSense service UUID is included in the advertising packet, so the app must perform GATT service discovery after connecting instead of filtering for the provisioning UUID in advertisements.
+
+The ESP32 continues advertising while one client is connected (up to two clients), allowing the phone and EFR32xG26 to be connected at the same time.
+
+### Provisioning GATT Service
+
+| Item | UUID | Properties | App value |
+|------|------|------------|-----------|
+| Service | `7a0a0101-5b8a-4f4c-9d1d-8b4e3d7a1000` | - | Wi-Fi provisioning service |
+| SSID | `7a0a0102-5b8a-4f4c-9d1d-8b4e3d7a1000` | WRITE | UTF-8 SSID, 1-32 bytes |
+| Password | `7a0a0103-5b8a-4f4c-9d1d-8b4e3d7a1000` | WRITE | UTF-8 password, up to 64 bytes |
+| Command | `7a0a0104-5b8a-4f4c-9d1d-8b4e3d7a1000` | WRITE | UTF-8 command: `CONNECT`, `STATUS`, or `CLEAR` |
+| Status | `7a0a0105-5b8a-4f4c-9d1d-8b4e3d7a1000` | READ, NOTIFY | UTF-8 provisioning state/result |
+
+For WPA/WPA2, the password must be 8-64 bytes. The password characteristic must still be written before `CONNECT`; an empty value represents an open network.
+
+### App Provisioning Sequence
+
+1. Scan for and connect to BLE device `VitalSense-ESP32C3`.
+2. Discover the provisioning service and subscribe to notifications on the Status characteristic.
+3. Write the SSID to the SSID characteristic and wait for `SSID_RECEIVED`.
+4. Write the password to the Password characteristic and wait for `PASSWORD_RECEIVED`.
+5. Write `CONNECT` to the Command characteristic.
+6. The ESP32 reports `CONNECTING|<ssid>` and tests the candidate network for up to 20 seconds.
+7. On success, the ESP32 reports `CONNECTED|<ssid>|<ip>`, saves the verified credentials in NVS, opens UDP port 5005, and begins the normal one-second UDP broadcast cycle.
+8. On failure, it reports `FAILED|CHECK_SSID_PASSWORD`. Existing saved credentials are not replaced, and the ESP32 reconnects with the last known-good credentials when available.
+
+Credential writes are staged in RAM. They become the active saved credentials only after `CONNECT` succeeds. On later boots, BLE starts first and the ESP32 automatically connects with the saved NVS credentials. If no valid credentials exist, it remains available over BLE and reports `NO_CREDENTIALS` until the app provisions it.
+
+### Commands and Status Values
+
+| Command | Behavior |
+|---------|----------|
+| `CONNECT` | Validate and test the staged SSID/password, then save them only after a successful connection |
+| `STATUS` | Notify the current state: `CONNECTED|<ssid>|<ip>`, `CONNECTING|<ssid>`, `DISCONNECTED|<ssid>`, or `NO_CREDENTIALS` |
+| `CLEAR` | Erase saved and staged credentials, disconnect Wi-Fi, stop UDP, and report `CLEARED` |
+
+Other status/error values include `BOOTING`, `CONNECTING_SAVED`, `ERROR|SSID_EMPTY`, `ERROR|SSID_TOO_LONG`, `ERROR|PASSWORD_TOO_LONG`, `ERROR|SEND_SSID_AND_PASSWORD`, `ERROR|INVALID_CREDENTIALS_FORMAT`, `ERROR|NVS_SAVE_FAILED`, `ERROR|BAD_COMMAND`, and `ERROR|UNKNOWN_COMMAND`.
+
+### Transition to Data Transmission
+
+Provisioning and data transmission use different links:
+
+1. The app supplies network credentials over BLE.
+2. The ESP32 joins that Wi-Fi network in station mode and determines the subnet broadcast address.
+3. UDP is initialized on port 5005 after the connection succeeds.
+4. VitalSense Protocol v1 JSON is broadcast once per second to the subnet while Wi-Fi remains connected.
+5. If Wi-Fi drops, UDP stops and the ESP32 retries the saved network every 5 seconds. Transmission resumes automatically after reconnection.
+
+The EFR32 BLE sensor/risk exchange continues independently. The status LED becomes solid only after Wi-Fi is connected, the EFR32 link has been identified by a valid protocol write, and at least one UDP packet has transmitted successfully.
+
+---
+
 ## UDP Broadcast (VitalSense Protocol v1)
 
 **Port:** 5005 (broadcast to subnet)  
@@ -175,6 +231,7 @@ This firmware runs on the **ESP32-C3** and serves as the FSR sensor acquisition 
 | `SENSOR_SCAN_INTERVAL_MS` | 250 | Periodic FSR scan for local freshness |
 | `UDP_SEND_INTERVAL_MS` | 1000 | UDP broadcast interval |
 | `WIFI_RETRY_INTERVAL_MS` | 5000 | Wi-Fi reconnect retry |
+| `WIFI_PROVISION_TIMEOUT_MS` | 20000 | Time allowed to verify credentials received over BLE |
 | `MUX_SETTLE_MS` | 3 | MUX channel settle time |
 | `SAMPLES_PER_READ` | 8 | ADC samples per channel (averaged) |
 | `SAMPLE_DELAY_MS` | 1 | Delay between samples |
@@ -183,12 +240,9 @@ This firmware runs on the **ESP32-C3** and serves as the FSR sensor acquisition 
 
 ## User Configuration
 
-Edit at top of `VitalSense_ESP32.ino`:
+Wi-Fi credentials are not configured in the source file. Provision them from the app through the BLE service described above. The following deployment and network values remain configurable at the top of `VitalSense_ESP32.ino`:
 
 ```cpp
-static const char* WIFI_SSID     = "Blink";
-static const char* WIFI_PASSWORD = "Arpan@123";
-
 static const uint16_t UDP_PORT = 5005;
 
 static const uint8_t PROTOCOL_VERSION = 1;
@@ -233,11 +287,20 @@ monitor_speed = 115200
 ## Serial Debug Output (115200 baud)
 
 ```
-[BOOT] VitalSense LEAN ready
+[WiFi] No valid saved credentials
+[BLE] Wi-Fi provisioning service: OK
 [BLE] Service start: OK
 [BLE] Server start: CALLED
 [BLE] Local GATT service check: FOUND
-[BLE] VitalSense peripheral ready
+[BLE] VitalSense peripheral + Wi-Fi provisioning ready
+[WiFi] Waiting for BLE provisioning
+[WiFi Prov] NO_CREDENTIALS
+[BOOT] VitalSense LEAN ready
+[WiFi Prov] SSID_RECEIVED
+[WiFi Prov] PASSWORD_RECEIVED
+[WiFi Prov] CONNECTING|Hospital-WiFi
+[WiFi Prov] CONNECTED|Hospital-WiFi|192.168.1.42
+[WiFi Prov] Credentials verified and saved
 [WiFi] IP=192.168.1.42
 [UDP] Broadcast=192.168.1.255:5005
 [BLE] EFR32 connected

@@ -115,7 +115,8 @@ class _PlateCard extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: const Color(0xFF90CAF9).withValues(alpha: 0.1),
-          border: Border.all(color: const Color(0xFF90CAF9).withValues(alpha: 0.4)),
+          border:
+              Border.all(color: const Color(0xFF90CAF9).withValues(alpha: 0.4)),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(

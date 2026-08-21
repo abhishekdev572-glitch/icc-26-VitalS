@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/vital_sense_provider.dart';
+import '../providers/ble_provisioning_provider.dart';
 import '../services/notification_service.dart';
+import 'device_setup_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -67,7 +69,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Settings saved. Restart app to apply network changes.')),
+        const SnackBar(
+            content:
+                Text('Settings saved. Restart app to apply network changes.')),
       );
     }
   }
@@ -108,8 +112,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _openDeviceSetup() async {
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const DeviceSetupScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final vitalSense = context.watch<VitalSenseProvider>();
+    final provisioning = context.watch<BleProvisioningProvider>();
+    final device = vitalSense.selectedDevice;
     return Scaffold(
       backgroundColor: const Color(0xFFF9F9FF),
       appBar: AppBar(
@@ -121,13 +134,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: _saveSettings,
-            child: const Text('SAVE', style: TextStyle(color: Color(0xFF21638D), fontWeight: FontWeight.w700)),
+            child: const Text('SAVE',
+                style: TextStyle(
+                    color: Color(0xFF21638D), fontWeight: FontWeight.w700)),
           ),
         ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          _buildSection('Device Connectivity', [
+            _buildInfoTile(
+              'Connection',
+              device?.connectionStatus.name.toUpperCase() ?? 'NOT FOUND',
+            ),
+            _buildInfoTile(
+              'UDP Listener',
+              vitalSense.udpListenerActive ? 'Active' : 'Inactive',
+            ),
+            _buildInfoTile('UDP Port', '${vitalSense.udpPort}'),
+            if (device != null) ...[
+              _buildInfoTile('Device ID', device.data.deviceId),
+              _buildInfoTile('IP', device.sourceIp),
+            ],
+            if (provisioning.configuredSsid != null)
+              _buildInfoTile(
+                'Configured SSID',
+                provisioning.configuredSsid!,
+              ),
+            _buildActionTile(
+              title: device == null
+                  ? 'Configure Device Wi-Fi'
+                  : 'Change Wi-Fi Network',
+              subtitle: 'Connect directly to a VitalSense unit for setup',
+              icon: Icons.settings_input_antenna,
+              color: const Color(0xFF21638D),
+              onTap: _openDeviceSetup,
+            ),
+          ]),
+          const SizedBox(height: 24),
           _buildSection('Network', [
             _buildNumberField(
               label: 'UDP Port',
@@ -144,7 +189,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildNumberField(
               label: 'Stale Timeout (seconds)',
               value: _staleTimeout,
-              onChanged: (v) => setState(() => _staleTimeout = v.clamp(_liveTimeout + 1, 300)),
+              onChanged: (v) => setState(
+                  () => _staleTimeout = v.clamp(_liveTimeout + 1, 300)),
               helper: 'Seconds before connection marked STALE',
             ),
             _buildSwitchTile(
@@ -156,7 +202,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildNumberField(
               label: 'Reconnect Interval (seconds)',
               value: _reconnectInterval,
-              onChanged: (v) => setState(() => _reconnectInterval = v.clamp(1, 60)),
+              onChanged: (v) =>
+                  setState(() => _reconnectInterval = v.clamp(1, 60)),
               helper: 'Delay between reconnection attempts',
             ),
           ]),
@@ -172,7 +219,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: 'Critical Alerts Only',
               subtitle: 'Only notify for HIGH risk (not MEDIUM)',
               value: _criticalAlertsOnly,
-              onChanged: _notificationsEnabled ? (v) => setState(() => _criticalAlertsOnly = v) : null,
+              onChanged: _notificationsEnabled
+                  ? (v) => setState(() => _criticalAlertsOnly = v)
+                  : null,
             ),
             _buildSwitchTile(
               title: 'Background Monitoring',
@@ -202,7 +251,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildNumberField(
               label: 'Max Log Entries',
               value: _maxLogEntries,
-              onChanged: (v) => setState(() => _maxLogEntries = v.clamp(100, 5000)),
+              onChanged: (v) =>
+                  setState(() => _maxLogEntries = v.clamp(100, 5000)),
               helper: 'Maximum events to keep in history',
             ),
             _buildActionTile(
@@ -300,10 +350,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   initialValue: value.toString(),
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.right,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w600),
                   decoration: const InputDecoration(
                     isDense: true,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     border: OutlineInputBorder(),
                   ),
                   onChanged: (text) {
@@ -316,7 +368,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           if (helper != null) ...[
             const SizedBox(height: 4),
-            Text(helper, style: const TextStyle(fontSize: 12, color: Color(0xFF71787F))),
+            Text(helper,
+                style: const TextStyle(fontSize: 12, color: Color(0xFF71787F))),
           ],
         ],
       ),
@@ -346,7 +399,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: enabled ? const Color(0xFF111C2D) : const Color(0xFFC1C7CF),
+                    color: enabled
+                        ? const Color(0xFF111C2D)
+                        : const Color(0xFFC1C7CF),
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -354,7 +409,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle,
                   style: TextStyle(
                     fontSize: 12,
-                    color: enabled ? const Color(0xFF71787F) : const Color(0xFFC1C7CF),
+                    color: enabled
+                        ? const Color(0xFF71787F)
+                        : const Color(0xFFC1C7CF),
                   ),
                 ),
               ],
@@ -386,7 +443,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9), width: 1)),
+          border:
+              Border(bottom: BorderSide(color: Color(0xFFF1F5F9), width: 1)),
         ),
         child: Row(
           children: [
@@ -408,7 +466,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: enabled ? const Color(0xFF111C2D) : const Color(0xFFC1C7CF),
+                      color: enabled
+                          ? const Color(0xFF111C2D)
+                          : const Color(0xFFC1C7CF),
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -416,7 +476,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle,
                     style: TextStyle(
                       fontSize: 12,
-                      color: enabled ? const Color(0xFF71787F) : const Color(0xFFC1C7CF),
+                      color: enabled
+                          ? const Color(0xFF71787F)
+                          : const Color(0xFFC1C7CF),
                     ),
                   ),
                 ],
@@ -439,8 +501,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 14, color: Color(0xFF41474E), fontWeight: FontWeight.w500)),
-          Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF21638D), fontFeatures: [FontFeature.tabularFigures()])),
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF41474E),
+                  fontWeight: FontWeight.w500)),
+          Text(value,
+              style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF21638D),
+                  fontFeatures: [FontFeature.tabularFigures()])),
         ],
       ),
     );

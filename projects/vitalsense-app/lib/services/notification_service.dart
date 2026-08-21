@@ -11,13 +11,15 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _notifications =
+      FlutterLocalNotificationsPlugin();
   bool _initialized = false;
   bool _permissionGranted = false;
 
   static const String _channelId = 'vitalsense_risk_alerts';
   static const String _channelName = 'VitalSense Risk Alerts';
-  static const String _channelDescription = 'Critical risk notifications for patient monitoring';
+  static const String _channelDescription =
+      'Critical risk notifications for patient monitoring';
 
   Future<void> initialize() async {
     if (_initialized) return;
@@ -25,14 +27,16 @@ class NotificationService {
     tz.initializeTimeZones();
     tz.setLocalLocation(tz.getLocation('UTC'));
 
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
 
-    const initSettings = InitializationSettings(android: androidSettings, iOS: iosSettings);
+    const initSettings =
+        InitializationSettings(android: androidSettings, iOS: iosSettings);
 
     await _notifications.initialize(
       initSettings,
@@ -55,15 +59,19 @@ class NotificationService {
       enableLights: true,
       showBadge: true,
     );
-    await _notifications.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>()?.createNotificationChannel(channel);
+    await _notifications
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(channel);
   }
 
   Future<void> _requestPermissions() async {
     if (defaultTargetPlatform == TargetPlatform.android) {
-      final androidPlugin = _notifications.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
-      _permissionGranted = await androidPlugin?.requestNotificationsPermission() ?? false;
+      final androidPlugin =
+          _notifications.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      _permissionGranted =
+          await androidPlugin?.requestNotificationsPermission() ?? false;
 
       if (!_permissionGranted) {
         await Permission.notification.request();
@@ -73,10 +81,11 @@ class NotificationService {
       final iosPlugin = _notifications.resolvePlatformSpecificImplementation<
           IOSFlutterLocalNotificationsPlugin>();
       _permissionGranted = await iosPlugin?.requestPermissions(
-        alert: true,
-        badge: true,
-        sound: true,
-      ) ?? false;
+            alert: true,
+            badge: true,
+            sound: true,
+          ) ??
+          false;
     }
   }
 
@@ -125,7 +134,8 @@ class NotificationService {
       interruptionLevel: InterruptionLevel.critical,
     );
 
-    final details = NotificationDetails(android: androidDetails, iOS: iosDetails);
+    final details =
+        NotificationDetails(android: androidDetails, iOS: iosDetails);
 
     await _notifications.show(
       deviceId.hashCode,
@@ -163,7 +173,8 @@ class NotificationService {
       presentSound: true,
     );
 
-    const details = NotificationDetails(android: androidDetails, iOS: iosDetails);
+    const details =
+        NotificationDetails(android: androidDetails, iOS: iosDetails);
 
     await _notifications.show(
       deviceId.hashCode ^ 1,
@@ -185,10 +196,14 @@ class NotificationService {
 
   Color _getRiskColor(String level) {
     switch (level) {
-      case 'HIGH': return const Color(0xFFEF4444);
-      case 'MEDIUM': return const Color(0xFFF59E0B);
-      case 'LOW': return const Color(0xFF4ADE80);
-      default: return const Color(0xFF71787F);
+      case 'HIGH':
+        return const Color(0xFFEF4444);
+      case 'MEDIUM':
+        return const Color(0xFFF59E0B);
+      case 'LOW':
+        return const Color(0xFF4ADE80);
+      default:
+        return const Color(0xFF71787F);
     }
   }
 }

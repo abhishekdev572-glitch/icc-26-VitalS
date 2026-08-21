@@ -28,7 +28,9 @@ class _LogsScreenState extends State<LogsScreen> {
     final logsJson = prefs.getString('event_logs') ?? '[]';
     final List<dynamic> decoded = jsonDecode(logsJson);
     setState(() {
-      _logs = decoded.map((e) => LogEntry.fromJson(e as Map<String, dynamic>)).toList();
+      _logs = decoded
+          .map((e) => LogEntry.fromJson(e as Map<String, dynamic>))
+          .toList();
       _isLoading = false;
     });
   }
@@ -38,19 +40,24 @@ class _LogsScreenState extends State<LogsScreen> {
     await prefs.remove('event_logs');
     setState(() => _logs = []);
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Logs cleared')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Logs cleared')));
     }
   }
 
   Future<void> _exportLogs() async {
     if (_logs.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No logs to export')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('No logs to export')));
       return;
     }
-    final jsonString = const JsonEncoder.withIndent('  ').convert(_logs.map((e) => e.toJson()).toList());
+    final jsonString = const JsonEncoder.withIndent('  ')
+        .convert(_logs.map((e) => e.toJson()).toList());
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Exported ${_logs.length} entries (${jsonString.length} bytes)')),
+        SnackBar(
+            content: Text(
+                'Exported ${_logs.length} entries (${jsonString.length} bytes)')),
       );
     }
   }
@@ -73,12 +80,14 @@ class _LogsScreenState extends State<LogsScreen> {
         actions: [
           if (_logs.isNotEmpty) ...[
             IconButton(
-              icon: const Icon(Icons.download_rounded, color: Color(0xFF21638D)),
+              icon:
+                  const Icon(Icons.download_rounded, color: Color(0xFF21638D)),
               onPressed: _exportLogs,
               tooltip: 'Export Logs',
             ),
             IconButton(
-              icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444)),
+              icon: const Icon(Icons.delete_outline_rounded,
+                  color: Color(0xFFEF4444)),
               onPressed: _clearLogs,
               tooltip: 'Clear Logs',
             ),
@@ -126,11 +135,15 @@ class _LogsScreenState extends State<LogsScreen> {
             selectedColor: const Color(0xFF90CAF9).withValues(alpha: 0.3),
             checkmarkColor: const Color(0xFF21638D),
             labelStyle: TextStyle(
-              color: isSelected ? const Color(0xFF21638D) : const Color(0xFF41474E),
+              color: isSelected
+                  ? const Color(0xFF21638D)
+                  : const Color(0xFF41474E),
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
             ),
             side: BorderSide(
-              color: isSelected ? const Color(0xFF21638D) : const Color(0xFFC1C7CF),
+              color: isSelected
+                  ? const Color(0xFF21638D)
+                  : const Color(0xFFC1C7CF),
             ),
             backgroundColor: Colors.white,
             showCheckmark: false,
@@ -148,14 +161,19 @@ class _LogsScreenState extends State<LogsScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              _logs.isEmpty ? Icons.history_rounded : Icons.filter_list_off_rounded,
+              _logs.isEmpty
+                  ? Icons.history_rounded
+                  : Icons.filter_list_off_rounded,
               size: 64,
               color: const Color(0xFFC1C7CF),
             ),
             const SizedBox(height: 16),
             Text(
               _logs.isEmpty ? 'No Logs Yet' : 'No Matching Logs',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF111C2D)),
+              style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF111C2D)),
             ),
             const SizedBox(height: 8),
             Text(
@@ -163,7 +181,8 @@ class _LogsScreenState extends State<LogsScreen> {
                   ? 'Connection events, position changes, and risk alerts will appear here.'
                   : 'Try changing the filter or wait for new events.',
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14, color: Color(0xFF71787F), height: 1.5),
+              style: const TextStyle(
+                  fontSize: 14, color: Color(0xFF71787F), height: 1.5),
             ),
           ],
         ),
@@ -224,8 +243,11 @@ class _LogTile extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-            child: Icon(icons[log.type] ?? Icons.info_outline, color: color, size: 20),
+            decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10)),
+            child: Icon(icons[log.type] ?? Icons.info_outline,
+                color: color, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -236,18 +258,26 @@ class _LogTile extends StatelessWidget {
                   children: [
                     Text(
                       log.message,
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF111C2D)),
+                      style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF111C2D)),
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: color.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         log.type.name.toUpperCase(),
-                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: color, letterSpacing: 0.5),
+                        style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: color,
+                            letterSpacing: 0.5),
                       ),
                     ),
                   ],
@@ -255,13 +285,17 @@ class _LogTile extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   _formatTime(log.timestamp),
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF71787F)),
+                  style:
+                      const TextStyle(fontSize: 11, color: Color(0xFF71787F)),
                 ),
                 if (log.details != null && log.details!.isNotEmpty) ...[
                   const SizedBox(height: 6),
                   Text(
                     log.details!,
-                    style: const TextStyle(fontSize: 12, color: Color(0xFF41474E), fontFamily: 'monospace'),
+                    style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF41474E),
+                        fontFamily: 'monospace'),
                   ),
                 ],
               ],
@@ -307,7 +341,8 @@ class LogEntry {
 
   factory LogEntry.fromJson(Map<String, dynamic> json) => LogEntry(
         timestamp: DateTime.parse(json['timestamp'] as String),
-        type: LogFilter.values.firstWhere((e) => e.name == json['type'], orElse: () => LogFilter.all),
+        type: LogFilter.values.firstWhere((e) => e.name == json['type'],
+            orElse: () => LogFilter.all),
         message: json['message'] as String,
         details: json['details'] as String?,
         deviceId: json['deviceId'] as String?,
@@ -337,7 +372,9 @@ class LogService {
     );
 
     decoded.insert(0, entry.toJson());
-    if (decoded.length > _maxEntries) decoded.removeRange(_maxEntries, decoded.length);
+    if (decoded.length > _maxEntries) {
+      decoded.removeRange(_maxEntries, decoded.length);
+    }
 
     await prefs.setString(_key, jsonEncode(decoded));
   }

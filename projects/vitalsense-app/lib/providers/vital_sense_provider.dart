@@ -47,6 +47,8 @@ class VitalSenseProvider extends ChangeNotifier {
   final BackgroundService _backgroundService = BackgroundService.instance;
   StreamSubscription<VitalSensePacket>? _dataSub;
   StreamSubscription<String>? _errorSub;
+  final StreamController<VitalSensePacket> _packetController =
+      StreamController<VitalSensePacket>.broadcast();
   Timer? _statusTimer;
 
   /// Map of deviceId -> DeviceState
@@ -74,6 +76,9 @@ class VitalSenseProvider extends ChangeNotifier {
   bool get hasDevices => _devices.isNotEmpty;
   bool get backgroundMonitoringActive => _backgroundMonitoringActive;
   bool get notificationsEnabled => _notificationsEnabled;
+  bool get udpListenerActive => _udpService.isListening;
+  int get udpPort => UdpService.port;
+  Stream<VitalSensePacket> get packetStream => _packetController.stream;
 
   String? _lastError;
   String? get lastError => _lastError;
@@ -83,25 +88,26 @@ class VitalSenseProvider extends ChangeNotifier {
   }
 
   Future<void> _init() async {
-    await _notificationService.initialize();
-    await _backgroundService.initialize();
+    // Subscribe first so even the earliest valid packet is retained by the
+    // existing discovery pipeline, then bind UDP before optional app services.
+    _listenToUdpService();
 
     try {
       await _udpService.start();
-      LogService.logConnection(deviceId: 'system', event: 'UDP listener started', details: 'Port 5005');
+      LogService.logConnection(
+          deviceId: 'system',
+          event: 'UDP listener started',
+          details: 'Port 5005');
     } catch (e) {
       debugPrint('VitalSenseProvider: Failed to start UDP service: $e');
       _lastError = 'Failed to start UDP service: $e';
-      LogService.logError(message: 'Failed to start UDP service', details: e.toString());
+      LogService.logError(
+          message: 'Failed to start UDP service', details: e.toString());
       notifyListeners();
     }
 
-    _dataSub = _udpService.dataStream.listen(_onPacket);
-    _errorSub = _udpService.errorStream.listen((err) {
-      _lastError = err;
-      LogService.logError(message: 'UDP Error', details: err);
-      notifyListeners();
-    });
+    await _notificationService.initialize();
+    await _backgroundService.initialize();
 
     // Poll every second to update connection status
     _statusTimer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -109,6 +115,15 @@ class VitalSenseProvider extends ChangeNotifier {
     });
 
     _startBackgroundMonitoring();
+  }
+
+  void _listenToUdpService() {
+    _dataSub = _udpService.dataStream.listen(_onPacket);
+    _errorSub = _udpService.errorStream.listen((err) {
+      _lastError = err;
+      LogService.logError(message: 'UDP Error', details: err);
+      notifyListeners();
+    });
   }
 
   void _startBackgroundMonitoring() {
@@ -140,6 +155,7 @@ class VitalSenseProvider extends ChangeNotifier {
   }
 
   void _onPacket(VitalSensePacket packet) {
+    _packetController.add(packet);
     final now = DateTime.now();
     final deviceId = packet.data.deviceId;
     final existingDevice = _devices[deviceId];
@@ -153,7 +169,10 @@ class VitalSenseProvider extends ChangeNotifier {
 
     // Log connection event if new device or reconnected
     if (existingDevice == null) {
-      LogService.logConnection(deviceId: deviceId, event: 'Device discovered', details: 'IP: ${packet.sourceIp}');
+      LogService.logConnection(
+          deviceId: deviceId,
+          event: 'Device discovered',
+          details: 'IP: ${packet.sourceIp}');
       if (_notificationsEnabled) {
         _notificationService.showConnectionAlert(
           deviceId: deviceId,
@@ -163,7 +182,10 @@ class VitalSenseProvider extends ChangeNotifier {
         );
       }
     } else if (existingDevice.connectionStatus != ConnectionStatus.live) {
-      LogService.logConnection(deviceId: deviceId, event: 'Reconnected', details: 'Was ${existingDevice.connectionStatus.name}');
+      LogService.logConnection(
+          deviceId: deviceId,
+          event: 'Reconnected',
+          details: 'Was ${existingDevice.connectionStatus.name}');
       if (_notificationsEnabled) {
         _notificationService.showConnectionAlert(
           deviceId: deviceId,
@@ -175,16 +197,25 @@ class VitalSenseProvider extends ChangeNotifier {
     }
 
     // Log position change
-    if (existingDevice != null && existingDevice.data.position != packet.data.position) {
-      LogService.logPosition(deviceId: deviceId, position: packet.data.position, duration: packet.data.positionDuration);
+    if (existingDevice != null &&
+        existingDevice.data.position != packet.data.position) {
+      LogService.logPosition(
+          deviceId: deviceId,
+          position: packet.data.position,
+          duration: packet.data.positionDuration);
     }
 
     // Log risk alerts and show notifications
     if (existingDevice != null && packet.data.riskValid) {
       final highestRisk = packet.data.highestRisk;
       if (highestRisk.level == 'HIGH' || highestRisk.level == 'MEDIUM') {
-        if (existingDevice.data.highestRisk.level != highestRisk.level || existingDevice.data.highestRisk.zone != highestRisk.zone) {
-          LogService.logRisk(deviceId: deviceId, zone: highestRisk.zone, score: highestRisk.score, level: highestRisk.level);
+        if (existingDevice.data.highestRisk.level != highestRisk.level ||
+            existingDevice.data.highestRisk.zone != highestRisk.zone) {
+          LogService.logRisk(
+              deviceId: deviceId,
+              zone: highestRisk.zone,
+              score: highestRisk.score,
+              level: highestRisk.level);
           if (_notificationsEnabled) {
             _notificationService.showRiskAlert(
               deviceId: deviceId,
@@ -232,12 +263,15 @@ class VitalSenseProvider extends ChangeNotifier {
         // Log status change
         LogService.logConnection(
           deviceId: entry.key,
-          event: 'Status changed: ${oldStatus.name.toUpperCase()} → ${newStatus.name.toUpperCase()}',
+          event:
+              'Status changed: ${oldStatus.name.toUpperCase()} → ${newStatus.name.toUpperCase()}',
           details: 'Last packet ${age}s ago',
         );
 
         // Show notification for status changes
-        if (_notificationsEnabled && (newStatus == ConnectionStatus.offline || newStatus == ConnectionStatus.stale)) {
+        if (_notificationsEnabled &&
+            (newStatus == ConnectionStatus.offline ||
+                newStatus == ConnectionStatus.stale)) {
           _notificationService.showConnectionAlert(
             deviceId: entry.key,
             bedLabel: entry.value.data.bedLabel,
@@ -262,7 +296,8 @@ class VitalSenseProvider extends ChangeNotifier {
     _lastError = null;
     _devices.clear();
     _selectedDeviceId = null;
-    LogService.logConnection(deviceId: 'system', event: 'Manual reconnect initiated');
+    LogService.logConnection(
+        deviceId: 'system', event: 'Manual reconnect initiated');
     notifyListeners();
 
     _dataSub?.cancel();
@@ -277,13 +312,11 @@ class VitalSenseProvider extends ChangeNotifier {
 
     try {
       await _udpService.start();
-      LogService.logConnection(deviceId: 'system', event: 'UDP listener restarted', details: 'Port 5005');
-      _dataSub = _udpService.dataStream.listen(_onPacket);
-      _errorSub = _udpService.errorStream.listen((err) {
-        _lastError = err;
-        LogService.logError(message: 'UDP Error', details: err);
-        notifyListeners();
-      });
+      LogService.logConnection(
+          deviceId: 'system',
+          event: 'UDP listener restarted',
+          details: 'Port 5005');
+      _listenToUdpService();
       _statusTimer = Timer.periodic(const Duration(seconds: 1), (_) {
         _updateConnectionStatuses();
       });
@@ -303,9 +336,9 @@ class VitalSenseProvider extends ChangeNotifier {
     _errorSub?.cancel();
     _statusTimer?.cancel();
     _udpService.dispose();
+    _packetController.close();
     _stopBackgroundMonitoring();
     _backgroundService.dispose();
     super.dispose();
   }
 }
-

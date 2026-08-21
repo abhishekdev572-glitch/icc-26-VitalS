@@ -2,13 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'providers/vital_sense_provider.dart';
+import 'providers/ble_provisioning_provider.dart';
+import 'services/ble_provisioning_service.dart';
 import 'screens/dashboard_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => VitalSenseProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => VitalSenseProvider(),
+          lazy: false,
+        ),
+        ChangeNotifierProvider(
+          create: (context) => BleProvisioningProvider(
+            service: BleProvisioningService(),
+            udpPackets: context.read<VitalSenseProvider>().packetStream,
+          ),
+          lazy: false,
+        ),
+      ],
       child: const VitalSenseApp(),
     ),
   );

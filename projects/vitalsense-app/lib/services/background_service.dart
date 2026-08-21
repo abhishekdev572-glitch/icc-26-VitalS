@@ -37,11 +37,13 @@ class BackgroundService {
     });
   }
 
-  static Future<void> _performBackgroundCheck(Map<String, dynamic>? inputData) async {
+  static Future<void> _performBackgroundCheck(
+      Map<String, dynamic>? inputData) async {
     debugPrint('[Background] Performing periodic check...');
   }
 
-  static Future<void> _attemptBackgroundReconnect(Map<String, dynamic>? inputData) async {
+  static Future<void> _attemptBackgroundReconnect(
+      Map<String, dynamic>? inputData) async {
     debugPrint('[Background] Attempting reconnect...');
   }
 

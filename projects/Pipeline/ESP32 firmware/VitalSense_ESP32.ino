@@ -14,8 +14,10 @@
   6. Receive EFR32 posture / summary state:
        [0x03, position, duration_u32_le, riskValid,
         highestZone, highestScore, riskLevel]
-  7. Broadcast the complete VitalSense Protocol v1 JSON over UDP.
-  8. Drive active-low GPIO 7 LED when any avoidReturnFlag is active.
+  7. Provision local Wi-Fi credentials from a phone over BLE and retain them
+     in ESP32 NVS across reboots.
+  8. Broadcast the complete VitalSense Protocol v1 JSON over UDP.
+  9. Drive the active-low GPIO 7 system-status LED.
 
   Size reductions compared with the previous sketch
   -------------------------------------------------
@@ -48,6 +50,14 @@
   ESP32 -> EFR32:
     81 08 FSR0_L FSR0_H ... FSR7_L FSR7_H
 
+  Phone Wi-Fi provisioning BLE service:
+    Service: 7a0a0101-5b8a-4f4c-9d1d-8b4e3d7a1000
+    SSID:    7a0a0102-5b8a-4f4c-9d1d-8b4e3d7a1000  (WRITE UTF-8)
+    Password:7a0a0103-5b8a-4f4c-9d1d-8b4e3d7a1000  (WRITE UTF-8)
+    Command: 7a0a0104-5b8a-4f4c-9d1d-8b4e3d7a1000  (WRITE)
+             CONNECT / STATUS / CLEAR
+    Status:  7a0a0105-5b8a-4f4c-9d1d-8b4e3d7a1000  (READ + NOTIFY)
+
   Target library:
     NimBLE-Arduino 2.x
 */
@@ -55,16 +65,22 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <WiFiUdp.h>
+#include <Preferences.h>
 #include <NimBLEDevice.h>
 
 /* ============================================================
    USER CONFIG
    ============================================================ */
 
-static const char* WIFI_SSID     = "Blink";
-static const char* WIFI_PASSWORD = "Arpan@123";
-
+/*
+ * Wi-Fi credentials are provisioned from the phone over BLE and saved in
+ * ESP32 NVS. Nothing is hard-coded here anymore.
+ */
 static const uint16_t UDP_PORT = 5005;
+
+static const uint32_t WIFI_PROVISION_TIMEOUT_MS = 20000;
+static const size_t WIFI_SSID_MAX_LEN = 32;
+static const size_t WIFI_PASSWORD_MAX_LEN = 64;
 
 /*
  * VitalSense Protocol v1 identity.
@@ -115,6 +131,20 @@ static uint32_t lastWifiRetryMs = 0;
 #define BLE_RX_UUID      "7a0a0002-5b8a-4f4c-9d1d-8b4e3d7a1000"
 #define BLE_TX_UUID      "7a0a0003-5b8a-4f4c-9d1d-8b4e3d7a1000"
 
+/*
+ * Phone Wi-Fi provisioning service.
+ *
+ * The service itself does not need to be included in the advertising packet;
+ * the phone can find the unit by BLE_DEVICE_NAME, connect, then discover it.
+ * This keeps the legacy advertising packet small while the existing xG26
+ * service UUID remains advertised.
+ */
+#define WIFI_PROV_SERVICE_UUID "7a0a0101-5b8a-4f4c-9d1d-8b4e3d7a1000"
+#define WIFI_PROV_SSID_UUID    "7a0a0102-5b8a-4f4c-9d1d-8b4e3d7a1000"
+#define WIFI_PROV_PASS_UUID    "7a0a0103-5b8a-4f4c-9d1d-8b4e3d7a1000"
+#define WIFI_PROV_CMD_UUID     "7a0a0104-5b8a-4f4c-9d1d-8b4e3d7a1000"
+#define WIFI_PROV_STATUS_UUID  "7a0a0105-5b8a-4f4c-9d1d-8b4e3d7a1000"
+
 static const uint8_t BLE_CMD_REQUEST_FSR = 0x01;
 static const uint8_t BLE_CMD_RISK_UPDATE = 0x02;
 static const uint8_t BLE_CMD_STATE_UPDATE = 0x03;
@@ -126,7 +156,18 @@ static NimBLEServer* bleServer = nullptr;
 static NimBLECharacteristic* bleRx = nullptr;
 static NimBLECharacteristic* bleTx = nullptr;
 
-static volatile bool bleConnected = false;
+static NimBLECharacteristic* wifiProvSsid = nullptr;
+static NimBLECharacteristic* wifiProvPass = nullptr;
+static NimBLECharacteristic* wifiProvCmd = nullptr;
+static NimBLECharacteristic* wifiProvStatus = nullptr;
+
+/*
+ * A phone can also connect to this BLE server, so a generic server connection
+ * is not the same thing as the EFR32/xG26 connection. We mark the EFR32 link
+ * active only when it actually writes the VitalSense RX characteristic.
+ */
+static volatile bool efrBleConnected = false;
+static volatile uint16_t efrConnHandle = 0xFFFFU;
 static volatile bool bleFsrRequestPending = false;
 
 /* ============================================================
@@ -169,8 +210,28 @@ static portMUX_TYPE sharedMux = portMUX_INITIALIZER_UNLOCKED;
    ============================================================ */
 
 static WiFiUDP udp;
+static Preferences wifiPreferences;
+
 static bool wifiWasConnected = false;
 static volatile bool udpHasTransmitted = false;
+
+/* Saved/active Wi-Fi credentials. */
+static char wifiSsid[WIFI_SSID_MAX_LEN + 1] = {0};
+static char wifiPassword[WIFI_PASSWORD_MAX_LEN + 1] = {0};
+static bool wifiCredentialsAvailable = false;
+
+/* Credentials staged by the phone over BLE. */
+static char stagedWifiSsid[WIFI_SSID_MAX_LEN + 1] = {0};
+static char stagedWifiPassword[WIFI_PASSWORD_MAX_LEN + 1] = {0};
+static volatile bool stagedSsidReceived = false;
+static volatile bool stagedPasswordReceived = false;
+static volatile bool wifiConnectRequested = false;
+static volatile bool wifiClearRequested = false;
+static volatile bool wifiStatusRequested = false;
+
+/* Candidate connection is tested before replacing the saved credentials. */
+static bool wifiProvisionAttemptActive = false;
+static uint32_t wifiProvisionStartedMs = 0;
 
 /* ============================================================
    BASIC HELPERS
@@ -292,6 +353,267 @@ static void putU16LE(uint8_t* dst, uint16_t value)
 }
 
 /* ============================================================
+   WIFI CREDENTIAL STORAGE / BLE PROVISIONING HELPERS
+   ============================================================ */
+
+static void setProvisioningStatus(const char* status)
+{
+  if (wifiProvStatus == nullptr) {
+    return;
+  }
+
+  wifiProvStatus->setValue(status);
+  wifiProvStatus->notify();
+
+  Serial.print("[WiFi Prov] ");
+  Serial.println(status);
+}
+
+static void publishCurrentWifiStatus()
+{
+  char status[128];
+
+  if (WiFi.status() == WL_CONNECTED) {
+    snprintf(
+        status,
+        sizeof(status),
+        "CONNECTED|%s|%s",
+        WiFi.SSID().c_str(),
+        WiFi.localIP().toString().c_str());
+  } else if (wifiProvisionAttemptActive) {
+    snprintf(
+        status,
+        sizeof(status),
+        "CONNECTING|%s",
+        stagedWifiSsid);
+  } else if (wifiCredentialsAvailable) {
+    snprintf(
+        status,
+        sizeof(status),
+        "DISCONNECTED|%s",
+        wifiSsid);
+  } else {
+    snprintf(status, sizeof(status), "NO_CREDENTIALS");
+  }
+
+  setProvisioningStatus(status);
+}
+
+static bool isValidProvisionedCredentials(const char* ssid,
+                                          const char* password)
+{
+  const size_t ssidLen = strlen(ssid);
+  const size_t passwordLen = strlen(password);
+
+  if ((ssidLen < 1U) || (ssidLen > WIFI_SSID_MAX_LEN)) {
+    return false;
+  }
+
+  /* Empty password = open network. WPA/WPA2 PSK is normally 8..63 chars;
+     64 is also accepted for a raw hexadecimal PSK. */
+  if ((passwordLen != 0U)
+      && ((passwordLen < 8U)
+          || (passwordLen > WIFI_PASSWORD_MAX_LEN))) {
+    return false;
+  }
+
+  return true;
+}
+
+static void loadWifiCredentials()
+{
+  wifiSsid[0] = '\0';
+  wifiPassword[0] = '\0';
+  wifiCredentialsAvailable = false;
+
+  if (!wifiPreferences.begin("vitalwifi", true)) {
+    Serial.println("[WiFi] NVS open failed");
+    return;
+  }
+
+  String storedSsid =
+      wifiPreferences.getString("ssid", "");
+
+  String storedPassword =
+      wifiPreferences.getString("pass", "");
+
+  wifiPreferences.end();
+
+  if (!isValidProvisionedCredentials(
+          storedSsid.c_str(),
+          storedPassword.c_str())) {
+    Serial.println("[WiFi] No valid saved credentials");
+    return;
+  }
+
+  strlcpy(
+      wifiSsid,
+      storedSsid.c_str(),
+      sizeof(wifiSsid));
+
+  strlcpy(
+      wifiPassword,
+      storedPassword.c_str(),
+      sizeof(wifiPassword));
+
+  wifiCredentialsAvailable = true;
+
+  Serial.print("[WiFi] Loaded saved SSID: ");
+  Serial.println(wifiSsid);
+}
+
+static bool saveWifiCredentials(const char* ssid,
+                                const char* password)
+{
+  if (!wifiPreferences.begin("vitalwifi", false)) {
+    return false;
+  }
+
+  const size_t ssidWritten =
+      wifiPreferences.putString("ssid", ssid);
+
+  const size_t passwordWritten =
+      wifiPreferences.putString("pass", password);
+
+  wifiPreferences.end();
+
+  if ((ssidWritten == 0U) || (passwordWritten == 0U)) {
+    return false;
+  }
+
+  strlcpy(wifiSsid, ssid, sizeof(wifiSsid));
+  strlcpy(wifiPassword, password, sizeof(wifiPassword));
+  wifiCredentialsAvailable = true;
+
+  return true;
+}
+
+static void clearWifiCredentials()
+{
+  if (wifiPreferences.begin("vitalwifi", false)) {
+    wifiPreferences.clear();
+    wifiPreferences.end();
+  }
+
+  wifiSsid[0] = '\0';
+  wifiPassword[0] = '\0';
+  stagedWifiSsid[0] = '\0';
+  stagedWifiPassword[0] = '\0';
+
+  wifiCredentialsAvailable = false;
+  stagedSsidReceived = false;
+  stagedPasswordReceived = false;
+  wifiProvisionAttemptActive = false;
+
+  WiFi.disconnect(true, false);
+  udp.stop();
+  wifiWasConnected = false;
+  udpHasTransmitted = false;
+
+  setProvisioningStatus("CLEARED");
+}
+
+static bool copyBleTextToBuffer(NimBLECharacteristic* characteristic,
+                                char* destination,
+                                size_t destinationSize)
+{
+  NimBLEAttValue value = characteristic->getValue();
+  const size_t len = value.size();
+
+  if ((destinationSize == 0U) || (len >= destinationSize)) {
+    return false;
+  }
+
+  if (len != 0U) {
+    memcpy(destination, value.data(), len);
+  }
+
+  destination[len] = '\0';
+  return true;
+}
+
+class WifiSsidCallbacks : public NimBLECharacteristicCallbacks {
+  void onWrite(NimBLECharacteristic* characteristic,
+               NimBLEConnInfo& connInfo) override
+  {
+    (void)connInfo;
+
+    if (!copyBleTextToBuffer(
+            characteristic,
+            stagedWifiSsid,
+            sizeof(stagedWifiSsid))) {
+      stagedSsidReceived = false;
+      setProvisioningStatus("ERROR|SSID_TOO_LONG");
+      return;
+    }
+
+    stagedSsidReceived =
+        (strlen(stagedWifiSsid) != 0U);
+
+    setProvisioningStatus(
+        stagedSsidReceived
+        ? "SSID_RECEIVED"
+        : "ERROR|SSID_EMPTY");
+  }
+};
+
+class WifiPasswordCallbacks : public NimBLECharacteristicCallbacks {
+  void onWrite(NimBLECharacteristic* characteristic,
+               NimBLEConnInfo& connInfo) override
+  {
+    (void)connInfo;
+
+    if (!copyBleTextToBuffer(
+            characteristic,
+            stagedWifiPassword,
+            sizeof(stagedWifiPassword))) {
+      stagedPasswordReceived = false;
+      setProvisioningStatus("ERROR|PASSWORD_TOO_LONG");
+      return;
+    }
+
+    /* Empty is valid for an open Wi-Fi network. */
+    stagedPasswordReceived = true;
+    setProvisioningStatus("PASSWORD_RECEIVED");
+  }
+};
+
+class WifiCommandCallbacks : public NimBLECharacteristicCallbacks {
+  void onWrite(NimBLECharacteristic* characteristic,
+               NimBLEConnInfo& connInfo) override
+  {
+    (void)connInfo;
+
+    char command[24];
+
+    if (!copyBleTextToBuffer(
+            characteristic,
+            command,
+            sizeof(command))) {
+      setProvisioningStatus("ERROR|BAD_COMMAND");
+      return;
+    }
+
+    if (strcmp(command, "CONNECT") == 0) {
+      wifiConnectRequested = true;
+      return;
+    }
+
+    if (strcmp(command, "CLEAR") == 0) {
+      wifiClearRequested = true;
+      return;
+    }
+
+    if (strcmp(command, "STATUS") == 0) {
+      wifiStatusRequested = true;
+      return;
+    }
+
+    setProvisioningStatus("ERROR|UNKNOWN_COMMAND");
+  }
+};
+
+/* ============================================================
    BLE CALLBACKS
    ============================================================ */
 
@@ -299,13 +621,16 @@ class VitalSenseServerCallbacks : public NimBLEServerCallbacks {
   void onConnect(NimBLEServer* server,
                  NimBLEConnInfo& connInfo) override
   {
-    (void)server;
-    (void)connInfo;
+    Serial.print("[BLE] Client connected, handle=");
+    Serial.println(connInfo.getConnHandle());
 
-    bleConnected = true;
-    udpHasTransmitted = false;
-
-    Serial.println("[BLE] EFR32 connected");
+    /*
+     * Continue advertising so the second client (phone or EFR32) can also
+     * connect. NimBLE-Arduino defaults to multiple simultaneous connections.
+     */
+    if (server->getConnectedCount() < 2U) {
+      NimBLEDevice::getAdvertising()->start();
+    }
   }
 
   void onDisconnect(NimBLEServer* server,
@@ -313,18 +638,20 @@ class VitalSenseServerCallbacks : public NimBLEServerCallbacks {
                     int reason) override
   {
     (void)server;
-    (void)connInfo;
     (void)reason;
 
-    bleConnected = false;
-    udpHasTransmitted = false;
+    if (connInfo.getConnHandle() == efrConnHandle) {
+      efrBleConnected = false;
+      efrConnHandle = 0xFFFFU;
+      udpHasTransmitted = false;
 
-    Serial.println("[BLE] EFR32 disconnected");
+      Serial.println("[BLE] EFR32/xG26 disconnected");
+    } else {
+      Serial.print("[BLE] Client disconnected, handle=");
+      Serial.println(connInfo.getConnHandle());
+    }
 
-    /*
-     * Restart advertising for the next xG26 connection.
-     */
-    NimBLEDevice::getAdvertising()->start();
+    /* advertiseOnDisconnect(true) restarts advertising automatically. */
   }
 };
 
@@ -332,8 +659,6 @@ class VitalSenseRxCallbacks : public NimBLECharacteristicCallbacks {
   void onWrite(NimBLECharacteristic* characteristic,
                NimBLEConnInfo& connInfo) override
   {
-    (void)connInfo;
-
     NimBLEAttValue value =
         characteristic->getValue();
 
@@ -348,6 +673,19 @@ class VitalSenseRxCallbacks : public NimBLECharacteristicCallbacks {
 
     const uint8_t command =
         data[0];
+
+    /* Only correctly shaped VitalSense protocol packets identify this peer
+       as the EFR32/xG26 rather than a provisioning-phone connection. */
+    const bool isEfrPacket =
+        ((command == BLE_CMD_REQUEST_FSR) && (len == 1U))
+        || ((command == BLE_CMD_RISK_UPDATE) && (len == 4U))
+        || ((command == BLE_CMD_STATE_UPDATE)
+            && (len == STATE_PACKET_LENGTH));
+
+    if (isEfrPacket) {
+      efrBleConnected = true;
+      efrConnHandle = connInfo.getConnHandle();
+    }
 
     /*
      * 0x01:
@@ -526,6 +864,49 @@ static void startBLE()
           NIMBLE_PROPERTY::READ
           | NIMBLE_PROPERTY::NOTIFY);
 
+  /* Phone-facing Wi-Fi provisioning GATT service. */
+  NimBLEService* wifiService =
+      bleServer->createService(
+          WIFI_PROV_SERVICE_UUID);
+
+  wifiProvSsid =
+      wifiService->createCharacteristic(
+          WIFI_PROV_SSID_UUID,
+          NIMBLE_PROPERTY::WRITE);
+
+  wifiProvSsid->setCallbacks(
+      new WifiSsidCallbacks());
+
+  wifiProvPass =
+      wifiService->createCharacteristic(
+          WIFI_PROV_PASS_UUID,
+          NIMBLE_PROPERTY::WRITE);
+
+  wifiProvPass->setCallbacks(
+      new WifiPasswordCallbacks());
+
+  wifiProvCmd =
+      wifiService->createCharacteristic(
+          WIFI_PROV_CMD_UUID,
+          NIMBLE_PROPERTY::WRITE);
+
+  wifiProvCmd->setCallbacks(
+      new WifiCommandCallbacks());
+
+  wifiProvStatus =
+      wifiService->createCharacteristic(
+          WIFI_PROV_STATUS_UUID,
+          NIMBLE_PROPERTY::READ
+          | NIMBLE_PROPERTY::NOTIFY);
+
+  wifiProvStatus->setValue("BOOTING");
+
+  const bool wifiServiceStarted =
+      wifiService->start();
+
+  Serial.print("[BLE] Wi-Fi provisioning service: ");
+  Serial.println(wifiServiceStarted ? "OK" : "FAILED");
+
   /*
    * IMPORTANT:
    * Explicitly start the service before advertising.
@@ -551,6 +932,7 @@ static void startBLE()
    * NimBLEServer::start() returns void, so do not assign its return value.
    */
   bleServer->start();
+  bleServer->advertiseOnDisconnect(true);
 
   Serial.println("[BLE] Server start: CALLED");
 
@@ -575,7 +957,7 @@ static void startBLE()
   Serial.print("[BLE] Local GATT service check: ");
   Serial.println(checkService != nullptr ? "FOUND" : "NOT FOUND");
 
-  Serial.println("[BLE] VitalSense peripheral ready");
+  Serial.println("[BLE] VitalSense peripheral + Wi-Fi provisioning ready");
 }
 
 static void sendFreshFsrNotification()
@@ -598,7 +980,7 @@ static void sendFreshFsrNotification()
       packet,
       sizeof(packet));
 
-  if (bleConnected) {
+  if (efrBleConnected) {
     bleTx->notify();
   }
 }
@@ -621,7 +1003,7 @@ static void updateSystemStatusLed()
 {
   const bool systemReady =
       (WiFi.status() == WL_CONNECTED)
-      && bleConnected
+      && efrBleConnected
       && udpHasTransmitted;
 
   if (systemReady) {
@@ -674,16 +1056,140 @@ static void startWiFi()
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);
 
+  if (!wifiCredentialsAvailable) {
+    Serial.println("[WiFi] Waiting for BLE provisioning");
+    setProvisioningStatus("NO_CREDENTIALS");
+    return;
+  }
+
+  Serial.print("[WiFi] Connecting to saved SSID: ");
+  Serial.println(wifiSsid);
+
   WiFi.begin(
-      WIFI_SSID,
-      WIFI_PASSWORD);
+      wifiSsid,
+      wifiPassword);
 
   lastWifiRetryMs =
       millis();
+
+  setProvisioningStatus("CONNECTING_SAVED");
+}
+
+static void beginProvisionedWifiAttempt()
+{
+  if (!stagedSsidReceived || !stagedPasswordReceived) {
+    setProvisioningStatus("ERROR|SEND_SSID_AND_PASSWORD");
+    return;
+  }
+
+  if (!isValidProvisionedCredentials(
+          stagedWifiSsid,
+          stagedWifiPassword)) {
+    setProvisioningStatus("ERROR|INVALID_CREDENTIALS_FORMAT");
+    return;
+  }
+
+  wifiProvisionAttemptActive = true;
+  wifiProvisionStartedMs = millis();
+  wifiWasConnected = false;
+  udpHasTransmitted = false;
+
+  udp.stop();
+  WiFi.disconnect(true, false);
+  delay(50);
+  WiFi.mode(WIFI_STA);
+  WiFi.setSleep(false);
+
+  Serial.print("[WiFi Prov] Testing SSID: ");
+  Serial.println(stagedWifiSsid);
+
+  WiFi.begin(
+      stagedWifiSsid,
+      stagedWifiPassword);
+
+  char status[96];
+  snprintf(
+      status,
+      sizeof(status),
+      "CONNECTING|%s",
+      stagedWifiSsid);
+  setProvisioningStatus(status);
+}
+
+static void processWifiProvisioning()
+{
+  if (wifiClearRequested) {
+    wifiClearRequested = false;
+    clearWifiCredentials();
+  }
+
+  if (wifiStatusRequested) {
+    wifiStatusRequested = false;
+    publishCurrentWifiStatus();
+  }
+
+  if (wifiConnectRequested) {
+    wifiConnectRequested = false;
+    beginProvisionedWifiAttempt();
+  }
+
+  if (!wifiProvisionAttemptActive) {
+    return;
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    wifiProvisionAttemptActive = false;
+
+    if (!saveWifiCredentials(
+            stagedWifiSsid,
+            stagedWifiPassword)) {
+      setProvisioningStatus("ERROR|NVS_SAVE_FAILED");
+      return;
+    }
+
+    stagedSsidReceived = false;
+    stagedPasswordReceived = false;
+
+    char status[128];
+    snprintf(
+        status,
+        sizeof(status),
+        "CONNECTED|%s|%s",
+        wifiSsid,
+        WiFi.localIP().toString().c_str());
+
+    setProvisioningStatus(status);
+    Serial.println("[WiFi Prov] Credentials verified and saved");
+    return;
+  }
+
+  if ((millis() - wifiProvisionStartedMs)
+      < WIFI_PROVISION_TIMEOUT_MS) {
+    return;
+  }
+
+  wifiProvisionAttemptActive = false;
+  WiFi.disconnect(true, false);
+
+  setProvisioningStatus("FAILED|CHECK_SSID_PASSWORD");
+
+  /* If this was a reconfiguration attempt, recover the last known-good Wi-Fi. */
+  if (wifiCredentialsAvailable) {
+    delay(50);
+    WiFi.mode(WIFI_STA);
+    WiFi.setSleep(false);
+    WiFi.begin(wifiSsid, wifiPassword);
+    lastWifiRetryMs = millis();
+  }
 }
 
 static void maintainWiFi()
 {
+  /* Provisioning owns the Wi-Fi state machine while a candidate is tested. */
+  if (wifiProvisionAttemptActive) {
+    return;
+  }
+
   const bool connected =
       (WiFi.status() == WL_CONNECTED);
 
@@ -702,6 +1208,8 @@ static void maintainWiFi()
       Serial.print(getSubnetBroadcastAddress());
       Serial.print(":");
       Serial.println(UDP_PORT);
+
+      publishCurrentWifiStatus();
     }
 
     return;
@@ -713,6 +1221,11 @@ static void maintainWiFi()
     udp.stop();
 
     Serial.println("[WiFi] disconnected");
+    publishCurrentWifiStatus();
+  }
+
+  if (!wifiCredentialsAvailable) {
+    return;
   }
 
   const uint32_t now =
@@ -727,8 +1240,8 @@ static void maintainWiFi()
     WiFi.disconnect(false, false);
 
     WiFi.begin(
-        WIFI_SSID,
-        WIFI_PASSWORD);
+        wifiSsid,
+        wifiPassword);
   }
 }
 
@@ -921,8 +1434,12 @@ void setup()
 
   selectMuxChannel(0);
 
+  /* Load the last known-good Wi-Fi settings from NVS. */
+  loadWifiCredentials();
+
   /*
-   * BLE first: xG26 can connect even when Wi-Fi is unavailable.
+   * BLE first: xG26 and the setup phone can connect even when Wi-Fi is
+   * unavailable or has never been configured.
    */
   startBLE();
 
@@ -945,6 +1462,7 @@ void setup()
 
 void loop()
 {
+  processWifiProvisioning();
   maintainWiFi();
 
   /*

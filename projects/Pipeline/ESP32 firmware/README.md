@@ -349,5 +349,7 @@ ESP32 firmware/
 
 ## License
 
-SPDX-License-Identifier: MIT  
+This project is licensed under the [Apache License 2.0](../../../LICENSE.md).
+
+SPDX-License-Identifier: Apache-2.0  
 Copyright 2025 VitalSense Project Contributors

@@ -200,3 +200,9 @@ See [VitalSense Dashboard Integration Protocol v1](VitalSense_Dashboard_Integrat
 - [v1.2.0 - ESP32 Wi-Fi Credential Provisioning](RELEASE_NOTES_v1.2.0.md)
 - [v1.1.0](RELEASE_NOTES_v1.1.0.md)
 - [v1.0.0](RELEASE_NOTES_v1.0.0.md)
+
+## License
+
+This project is licensed under the [Apache License 2.0](../../LICENSE.md).
+
+SPDX-License-Identifier: Apache-2.0

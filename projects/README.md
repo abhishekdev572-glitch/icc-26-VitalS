@@ -127,4 +127,10 @@ projects/
 ```
 
 
+## License
+
+VitalSense project content is licensed under the [Apache License 2.0](../LICENSE.md).
+
+SPDX-License-Identifier: Apache-2.0
+
 Individual components and bundled third-party libraries may have additional licenses; consult their documentation before redistribution.

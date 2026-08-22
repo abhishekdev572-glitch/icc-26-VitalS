@@ -284,7 +284,9 @@ tflite_convert --output_file pressure_risk_mlp.tflite --input_file pressure_risk
 
 ## License
 
-SPDX-License-Identifier: MIT  
+VitalSense project content is licensed under the [Apache License 2.0](../../LICENSE.md).
+
+SPDX-License-Identifier: Apache-2.0  
 Copyright 2025 VitalSense Project Contributors
 
 Individual components may have additional licenses:

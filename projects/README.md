@@ -126,9 +126,5 @@ projects/
 `-- README.md
 ```
 
-## License
-
-SPDX-License-Identifier: MIT  
-Copyright 2025 VitalSense Project Contributors
 
 Individual components and bundled third-party libraries may have additional licenses; consult their documentation before redistribution.
